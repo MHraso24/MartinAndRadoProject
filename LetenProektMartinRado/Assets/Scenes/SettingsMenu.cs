@@ -4,63 +4,64 @@ using UnityEngine.UI;
 
 public class SettingsMenu : MonoBehaviour
 {
-    [SerializeField] private AudioMixer MainMixer;  
+    [Header("Audio")]
+    [SerializeField] private AudioMixer MainMixer;   // Must have exposed param "MusicVolume"
     [SerializeField] private Slider MusicSlider;
+
+    [Header("UI")]
     [SerializeField] private GameObject SettingsMenuUI;
     [SerializeField] private Button CloseSettingsButton;
     [SerializeField] private Button SettingsButton;
 
+    private const string ExposedParam = "MusicVolume";
+    private const string PrefsKey = "MusicVolume";
+
+    private void Awake()
+    {
+        // Hook up open/close buttons
+        SettingsButton.onClick.AddListener(OpenSettings);
+        CloseSettingsButton.onClick.AddListener(CloseSettings);
+
+        // Hook up slider in Inspector instead of here (avoids duplicate calls)
+        // musicSlider.onValueChanged.AddListener(SetMusicVolume); // remove this if set in Inspector
+    }
+
+    private void Start()
+    {
+        // Hide menu on start
+        CloseSettings();
+
+        // Load saved volume (default = 1)
+        float savedValue = PlayerPrefs.GetFloat(PrefsKey, 1f);
+        MusicSlider.value = savedValue;
+
+        // Apply immediately
+        SetMusicVolume(savedValue);
+    }
+
     public void OpenSettings()
     {
-        SettingsMenuUI.gameObject.SetActive(true);
+        SettingsMenuUI.SetActive(true);
     }
 
     public void CloseSettings()
     {
-        SettingsMenuUI.gameObject.SetActive(false);
-    }
-
-    private void Awake()
-    {
-        SettingsButton.onClick.AddListener(() =>
-        {
-            OpenSettings();
-        });
-        CloseSettingsButton.onClick.AddListener(() =>
-        {
-            CloseSettings();
-        });
-    }
-
-    private const string exposedParam = "MusicVolume"; // must match name in AudioMixer
-    private const string prefsKey = "MusicVolume";
-
-    void Start()
-    {
-        CloseSettings();
-        // Load saved slider value (default = 1 if not saved before)
-        float savedValue = PlayerPrefs.GetFloat(prefsKey, 1f);
-
-        // Apply to UI and AudioMixer
-        MusicSlider.value = savedValue;
-        SetMusicVolume(savedValue);
-
-        // Subscribe to slider changes
-        MusicSlider.onValueChanged.AddListener(SetMusicVolume);
+        SettingsMenuUI.SetActive(false);
     }
 
     public void SetMusicVolume(float sliderValue)
     {
-        // Clamp value to avoid Log10(0)
-        float dB;
-        if (sliderValue <= 0.0001f)
-            dB = -80f; // silence
-        else
-            dB = Mathf.Log10(sliderValue) * 20f;
+        // Avoid Log10(0) by clamping
+        float dB = (sliderValue <= 0.0001f) ? -80f : Mathf.Log10(sliderValue) * 20f;
 
-        MainMixer.SetFloat(exposedParam, dB);
+        // Update mixer
+        MainMixer.SetFloat("MusicVolume", dB);
+        Debug.Log("Slider value: " + sliderValue);
 
         // Save preference
-        PlayerPrefs.SetFloat(prefsKey, sliderValue);
+        PlayerPrefs.SetFloat("MusicVolume", sliderValue);
+
+     ///   bool success = MainMixer.SetFloat("MusicVolume", dB);
+     ///   Debug.Log("Trying to set MusicVolume to " + dB + " dB | Success: " + success);
     }
 }
