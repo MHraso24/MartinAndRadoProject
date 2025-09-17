@@ -5,7 +5,7 @@ using UnityEngine.UI;
 public class SettingsMenu : MonoBehaviour
 {
     [Header("Audio")]
-    [SerializeField] private AudioMixer MainMixer;   // Must have exposed param "MusicVolume"
+    [SerializeField] private AudioMixer MainMixer;   // Exposed parameter name must match ExposedParam
     [SerializeField] private Slider MusicSlider;
 
     [Header("UI")]
@@ -18,12 +18,22 @@ public class SettingsMenu : MonoBehaviour
 
     private void Awake()
     {
-        // Hook up open/close buttons
-        SettingsButton.onClick.AddListener(OpenSettings);
-        CloseSettingsButton.onClick.AddListener(CloseSettings);
+        // Hook up UI buttons (defensive)
+        if (SettingsButton != null) SettingsButton.onClick.AddListener(OpenSettings);
+        else Debug.LogWarning("SettingsMenu: SettingsButton is NOT assigned in inspector.");
 
-        // Hook up slider in Inspector instead of here (avoids duplicate calls)
-        // musicSlider.onValueChanged.AddListener(SetMusicVolume); // remove this if set in Inspector
+        if (CloseSettingsButton != null) CloseSettingsButton.onClick.AddListener(CloseSettings);
+        else Debug.LogWarning("SettingsMenu: CloseSettingsButton is NOT assigned in inspector.");
+
+        // Hook up slider (float signature)
+        if (MusicSlider != null)
+        {
+            UnityEngine.Events.UnityAction<float> cb = SetMusicVolume;
+            // Remove previous listener to avoid duplicates if this script is reloaded
+            //MusicSlider.onValueChanged.RemoveListener(cb);
+            MusicSlider.onValueChanged.AddListener(cb);
+        }
+        else Debug.LogWarning("SettingsMenu: MusicSlider is NOT assigned in inspector.");
     }
 
     private void Start()
@@ -31,37 +41,60 @@ public class SettingsMenu : MonoBehaviour
         // Hide menu on start
         CloseSettings();
 
-        // Load saved volume (default = 1)
+        // Load saved value (default 1)
         float savedValue = PlayerPrefs.GetFloat(PrefsKey, 1f);
-        MusicSlider.value = savedValue;
 
-        // Apply immediately
-        SetMusicVolume(savedValue);
+        if (MusicSlider != null)
+            MusicSlider.value = savedValue;
+
+        // Apply immediately (this will also be invoked by the slider change, but we call it explicitly)
+        ApplyMusicVolume(savedValue);
     }
 
     public void OpenSettings()
     {
-        SettingsMenuUI.SetActive(true);
+        if (SettingsMenuUI != null) SettingsMenuUI.SetActive(true);
     }
 
     public void CloseSettings()
     {
-        SettingsMenuUI.SetActive(false);
+        if (SettingsMenuUI != null) SettingsMenuUI.SetActive(false);
     }
 
+    // Called by Slider (float)
     public void SetMusicVolume(float sliderValue)
     {
-        // Avoid Log10(0) by clamping
-        float dB = (sliderValue <= 0.0001f) ? -80f : Mathf.Log10(sliderValue) * 20f;
-
-        // Update mixer
-        MainMixer.SetFloat("MusicVolume", dB);
-        Debug.Log("Slider value: " + sliderValue);
+        ApplyMusicVolume(sliderValue);
 
         // Save preference
-        PlayerPrefs.SetFloat("MusicVolume", sliderValue);
+        PlayerPrefs.SetFloat(PrefsKey, sliderValue);
+        PlayerPrefs.Save();
+    }
 
-     ///   bool success = MainMixer.SetFloat("MusicVolume", dB);
-     ///   Debug.Log("Trying to set MusicVolume to " + dB + " dB | Success: " + success);
+    // Optional: parameterless overload if you hooked this method in the inspector
+    public void SetMusicVolume()
+    {
+        if (MusicSlider != null) SetMusicVolume(MusicSlider.value);
+    }
+
+    private void ApplyMusicVolume(float sliderValue)
+    {
+        // clamp 0..1 and avoid log10(0)
+        sliderValue = Mathf.Clamp01(sliderValue);
+        float dB = (sliderValue <= 0.001f) ? -80f : Mathf.Log10(sliderValue) * 20f;
+
+        if (MainMixer == null)
+        {
+            Debug.LogWarning("SettingsMenu: MainMixer is NOT assigned in inspector.");
+            return;
+        }
+
+        bool success = MainMixer.SetFloat(ExposedParam, dB);
+        Debug.Log($"ApplyMusicVolume: slider={sliderValue:F3} -> dB={dB:F2} | SetFloat success: {success}");
+
+        if (!success)
+        {
+            Debug.LogWarning($"SetFloat failed — make sure AudioMixer has an exposed parameter named '{ExposedParam}' (case-sensitive) and that the AudioSource is routed to that group.");
+        }
     }
 }
