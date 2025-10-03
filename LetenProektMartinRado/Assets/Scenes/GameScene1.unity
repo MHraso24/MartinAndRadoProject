@@ -736,6 +736,7 @@ GameObject:
   - component: {fileID: 1163308565}
   - component: {fileID: 1163308564}
   - component: {fileID: 1163308563}
+  - component: {fileID: 1163308566}
   m_Layer: 5
   m_Name: ContinueButton1
   m_TagString: Untagged
@@ -845,6 +846,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1163308561}
   m_CullTransparentMesh: 1
+--- !u!114 &1163308566
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1163308561}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c726b9e469f8f854491e9e3c0098951e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameScene1UI
+  ContinueButton: {fileID: 1163308563}
 --- !u!1 &1179292398
 GameObject:
   m_ObjectHideFlags: 0
